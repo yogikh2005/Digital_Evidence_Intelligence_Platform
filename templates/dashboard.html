@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEIP | Intelligence Dashboard</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Styles -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+    <!-- App Container -->
+    <div id="app">
+        <!-- Auth View -->
+        <div id="auth-view" class="view glass active">
+            <div class="auth-header">
+                <div class="logo"></div>
+                <h2>Welcome to DEIP</h2>
+                <p>Digital Evidence Intelligence Platform</p>
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                </div>
+                <div id="login-error" class="error-msg"></div>
+                <button type="submit" class="btn primary-btn">Access System</button>
+            </form>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="view hidden">
+            <nav class="navbar glass">
+                <div class="nav-brand">DEIP<span class="dot">.</span></div>
+                <div class="nav-user">
+                    <span id="user-role-badge" class="badge">Role</span>
+                    <span id="user-name">User Name</span>
+                    <button id="logout-btn" class="btn outline-btn btn-sm">Logout</button>
+                </div>
+            </nav>
+
+            <main class="dashboard-content">
+                <header class="page-header">
+                    <h1>Intelligence Overview</h1>
+                    <p>Manage and monitor investigation cases and digital evidence.</p>
+                </header>
+
+                <div class="grid">
+                    <!-- Cases Panel -->
+                    <section class="panel glass">
+                        <div class="panel-header">
+                            <h3>Active Cases</h3>
+                            <button class="btn icon-btn" onclick="fetchCases()">↻</button>
+                        </div>
+                        <div id="cases-list" class="list-container">
+                            <div class="loader"></div>
+                        </div>
+                    </section>
+
+                    <!-- Evidence Panel -->
+                    <section class="panel glass">
+                        <div class="panel-header">
+                            <h3>Evidence Logs</h3>
+                            <button class="btn icon-btn" onclick="fetchEvidence()">↻</button>
+                        </div>
+                        <div id="evidence-list" class="list-container">
+                            <div class="loader"></div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>
