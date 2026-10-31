@@ -87,3 +87,21 @@ lerna-debug.log*
 Thumbs.db
 ehthumbs.db
 desktop.ini
+
+
+# Testing and coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Type checking
+.mypy_cache/
+.pyright/
+
+# Vite cache
+frontend/.vite/
+
+# Environment files
+.env.*
+!.env.example
