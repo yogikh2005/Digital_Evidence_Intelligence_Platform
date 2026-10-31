@@ -18,7 +18,11 @@ import { useContext } from 'react';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
-  if (loading) return <div>Loading...</div>;
+  if (loading) return (
+    <div className="loading-screen">
+      <div className="loading-spinner"></div>
+    </div>
+  );
   return user ? children : <Navigate to="/login" />;
 };
 
