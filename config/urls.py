@@ -13,5 +13,6 @@ urlpatterns=[
     path("api/evidence/",include("evidence.urls")),
     path("api/reports/",include("reports.urls")),
     path("api/audit/",include("audit.urls")),
+    path("api/custody/",include("custody.urls")),
 ]
 if settings.DEBUG: urlpatterns += static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)

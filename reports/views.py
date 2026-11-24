@@ -23,7 +23,7 @@ class ReportListCreateView(generics.ListCreateAPIView):
         return q.none()
     def perform_create(self, serializer):
         u = self.request.user
-        if u.role not in [User.Role.ADMIN, User.Role.INVESTIGATING_OFFICER, User.Role.FORENSIC_OFFICER]: raise PermissionDenied("Only Admin, Investigating or Forensic Officer can create reports.")
+        if u.role not in [User.Role.ADMIN, User.Role.FORENSIC_OFFICER]: raise PermissionDenied("Only Admin or Forensic Officers can create reports.")
         obj = serializer.save(generated_by=u)
         audit(u, "REPORT_CREATED", {"report_id": obj.id}, self.request)
 

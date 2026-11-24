@@ -1,8 +1,10 @@
 import hashlib
 import json
-
+import logging
 import requests
 from faster_whisper import WhisperModel
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_file_sha256(file_path):
@@ -123,16 +125,25 @@ Rules:
             ) from exc
 
     except requests.exceptions.Timeout as exc:
-        raise RuntimeError(
-            "Ollama timed out while analyzing the transcript."
-        ) from exc
-
-    except requests.exceptions.HTTPError as exc:
-        raise RuntimeError(
-            f"Ollama returned an HTTP error: {exc}"
-        ) from exc
+        logger.warning("Ollama timed out while analyzing transcript: %s", exc)
+        return {
+            "summary": "Transcript extracted. Ollama LLM timed out during forensic summarization.",
+            "people_mentioned": [],
+            "dates_and_times": [],
+            "locations_mentioned": [],
+            "key_statements": [s.strip() for s in transcript.split(".")[:3] if s.strip()],
+            "uncertainties": ["Ollama LLM timed out. Re-run analysis or check system load."],
+            "requires_human_review": True,
+        }
 
     except requests.exceptions.RequestException as exc:
-        raise RuntimeError(
-            f"Could not connect to Ollama: {exc}"
-        ) from exc
+        logger.warning("Ollama connection failed: %s. Returning preliminary transcript summary.", exc)
+        return {
+            "summary": "Audio transcribed successfully. (Ollama local LLM is offline or not responding on port 11434).",
+            "people_mentioned": [],
+            "dates_and_times": [],
+            "locations_mentioned": [],
+            "key_statements": [s.strip() for s in transcript.split(".")[:3] if s.strip()],
+            "uncertainties": [f"Local LLM (qwen3:4b) offline. Start Ollama with 'ollama serve' and 'ollama pull qwen3:4b' to generate deep forensic entity extraction."],
+            "requires_human_review": True,
+        }

@@ -1,12 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 import { Users, Folder, ShieldAlert, FileText, Briefcase, RefreshCw, Calendar as CalendarIcon, Server, Shield, FileOutput, CheckCircle } from 'lucide-react';
 
 const CreateCase = () => {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [step, setStep] = useState(1);
   const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    if (user && !['ADMIN', 'INVESTIGATING_OFFICER'].includes(user.role)) {
+      navigate('/cases');
+    }
+  }, [user, navigate]);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -24,7 +32,17 @@ const CreateCase = () => {
   });
 
   useEffect(() => {
-    api.get('/auth/users/').then(res => setUsers(res.data)).catch(console.error);
+    api.get('/auth/users/').then(res => {
+      const data = res.data || [];
+      setUsers(data);
+      const forensic = data.find(u => u.role === 'FORENSIC_OFFICER');
+      const supervisor = data.find(u => u.role === 'SUPERVISOR');
+      setFormData(prev => ({
+        ...prev,
+        forensic_officer: prev.forensic_officer || (forensic ? String(forensic.id) : ''),
+        supervisor: prev.supervisor || (supervisor ? String(supervisor.id) : '')
+      }));
+    }).catch(console.error);
   }, []);
 
   const categories = [
@@ -125,7 +143,9 @@ const CreateCase = () => {
                 <select value={formData.forensic_officer} onChange={e => setFormData({...formData, forensic_officer: e.target.value})}>
                   <option value="">Select Forensic Officer</option>
                   {users.filter(u => u.role === 'FORENSIC_OFFICER' || u.role === 'ADMIN').map(u => (
-                    <option key={u.id} value={u.id}>{u.username} ({u.role})</option>
+                    <option key={u.id} value={u.id}>
+                      {u.first_name || u.last_name ? `${u.first_name || ''} ${u.last_name || ''}`.trim() : u.username} (@{u.username} - {u.role ? u.role.replace(/_/g, ' ') : ''})
+                    </option>
                   ))}
                 </select>
               </div>
@@ -134,7 +154,9 @@ const CreateCase = () => {
                 <select value={formData.supervisor} onChange={e => setFormData({...formData, supervisor: e.target.value})}>
                   <option value="">Select Supervisor</option>
                   {users.filter(u => u.role === 'SUPERVISOR' || u.role === 'ADMIN').map(u => (
-                    <option key={u.id} value={u.id}>{u.username} ({u.role})</option>
+                    <option key={u.id} value={u.id}>
+                      {u.first_name || u.last_name ? `${u.first_name || ''} ${u.last_name || ''}`.trim() : u.username} (@{u.username} - {u.role ? u.role.replace(/_/g, ' ') : ''})
+                    </option>
                   ))}
                 </select>
               </div>

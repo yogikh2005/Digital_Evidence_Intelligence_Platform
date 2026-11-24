@@ -1,11 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 import { UploadCloud, Image as ImageIcon, FileVideo, FileAudio, FileText, File, Trash2, ShieldCheck } from 'lucide-react';
 
 const UploadEvidence = () => {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [cases, setCases] = useState([]);
+
+  useEffect(() => {
+    if (user && !['ADMIN', 'EVIDENCE_OFFICER'].includes(user.role)) {
+      navigate('/evidence');
+    }
+  }, [user, navigate]);
   const [formData, setFormData] = useState({
     case_id: '',
     evidence_type: '',

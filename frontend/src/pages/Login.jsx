@@ -22,12 +22,6 @@ const Login = () => {
     }
   };
 
-  const handleQuickFill = (user, pass) => {
-    setUsername(user);
-    setPassword(pass);
-    setError('');
-  };
-
   return (
     <div className="login-wrapper">
       {/* Left Hero Pane (Light Enterprise Canvas) */}
@@ -100,36 +94,6 @@ const Login = () => {
             </div>
             <h2>Sign in to Account</h2>
             <p className="login-subtitle">Enter your official credentials to access the platform</p>
-          </div>
-
-          {/* Quick Demo Fill Buttons for convenience */}
-          <div className="login-demo-helper">
-            <div className="login-demo-label">
-              <Key size={13} /> Quick Fill Demo Account
-            </div>
-            <div className="login-demo-pills">
-              <button 
-                type="button" 
-                className="demo-role-btn" 
-                onClick={() => handleQuickFill('admin', 'admin123')}
-              >
-                Admin
-              </button>
-              <button 
-                type="button" 
-                className="demo-role-btn" 
-                onClick={() => handleQuickFill('investigator', 'password123')}
-              >
-                Investigator
-              </button>
-              <button 
-                type="button" 
-                className="demo-role-btn" 
-                onClick={() => handleQuickFill('evidence_officer', 'password123')}
-              >
-                Evidence Officer
-              </button>
-            </div>
           </div>
 
           <form onSubmit={handleSubmit}>

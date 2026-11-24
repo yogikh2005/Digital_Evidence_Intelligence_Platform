@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, Folder, FileText, BarChart2, Plus, Clock, UploadCloud, Edit2, UserPlus, MoreVertical, ArrowUpRight } from 'lucide-react';
 
 const Dashboard = () => {
+  const { user } = useContext(AuthContext);
   const [stats, setStats] = useState({ users: 5, cases: 0, evidence: 0, reports: 0 });
   const [recentCases, setRecentCases] = useState([]);
   const navigate = useNavigate();
@@ -54,9 +56,11 @@ const Dashboard = () => {
           <h1 className="page-title">Executive Dashboard</h1>
           <p className="page-subtitle">Real-time operational metrics and digital chain of custody status</p>
         </div>
-        <Link to="/cases/new" className="btn btn-primary" style={{ textDecoration: 'none' }}>
-          <Plus size={18} /> New Investigation Case
-        </Link>
+        {['ADMIN', 'INVESTIGATING_OFFICER'].includes(user?.role) && (
+          <Link to="/cases/new" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+            <Plus size={18} /> New Investigation Case
+          </Link>
+        )}
       </div>
 
       {/* Top 4 Stat Cards */}

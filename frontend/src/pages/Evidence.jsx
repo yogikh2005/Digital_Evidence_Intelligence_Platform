@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 import { Search, Plus, Eye, Download, Trash2, ChevronLeft, ChevronRight, FileVideo, Image as ImageIcon, FileAudio, FileText, File, Copy } from 'lucide-react';
 
 const Evidence = () => {
+  const { user } = useContext(AuthContext);
   const [evidence, setEvidence] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
@@ -66,9 +68,11 @@ const Evidence = () => {
           <h1 className="page-title">Evidence Vault</h1>
           <p className="page-subtitle">Secure repository with tamper-evident SHA-256 verification and custodial logs</p>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/evidence/new')}>
-          <Plus size={18} /> Upload New Evidence
-        </button>
+        {['ADMIN', 'EVIDENCE_OFFICER'].includes(user?.role) && (
+          <button className="btn btn-primary" onClick={() => navigate('/evidence/new')}>
+            <Plus size={18} /> Upload New Evidence
+          </button>
+        )}
       </div>
 
       <div className="filter-bar">

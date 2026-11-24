@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Folder } from 'lucide-react';
 
 const Cases = () => {
+  const { user } = useContext(AuthContext);
   const [cases, setCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -55,9 +57,11 @@ const Cases = () => {
           <h1 className="page-title">Investigation Cases</h1>
           <p className="page-subtitle">Track case files, assigned officers, and chain-of-custody milestones</p>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/cases/new')}>
-          <Plus size={18} /> Create Case
-        </button>
+        {['ADMIN', 'INVESTIGATING_OFFICER'].includes(user?.role) && (
+          <button className="btn btn-primary" onClick={() => navigate('/cases/new')}>
+            <Plus size={18} /> Create Case
+          </button>
+        )}
       </div>
 
       <div className="filter-bar">

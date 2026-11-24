@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import api from '../services/api';
-import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
+import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Download, X } from 'lucide-react';
 
 const Reports = () => {
+  const { user } = useContext(AuthContext);
   const [reports, setReports] = useState([]);
+  const [cases, setCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [showModal, setShowModal] = useState(false);
+  const [newReport, setNewReport] = useState({ case_id: '', title: '', summary: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
+  const fetchReports = () => {
     api.get('/reports/').then(res => {
       const formatted = res.data.map(r => ({
         id: r.id,
@@ -15,13 +22,39 @@ const Reports = () => {
         case_number: r.case?.case_number || 'N/A',
         title: r.title || 'Forensic Examination Report',
         author: r.generated_by?.username || 'Officer',
-        role: r.generated_by?.role?.replace('_', ' ') || 'Investigator',
+        role: r.generated_by?.role?.replace(/_/g, ' ') || 'Investigator',
         status: r.status.charAt(0).toUpperCase() + r.status.slice(1).toLowerCase(),
         date: new Date(r.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       }));
       setReports(formatted);
     }).catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchReports();
+    api.get('/cases/').then(res => setCases(res.data)).catch(console.error);
   }, []);
+
+  const handleCreateReport = async (e) => {
+    e.preventDefault();
+    if (!newReport.case_id) return setError('Please select an associated case.');
+    setError('');
+    setLoading(true);
+    try {
+      await api.post('/reports/', {
+        case_id: parseInt(newReport.case_id, 10),
+        title: newReport.title,
+        summary: newReport.summary,
+      });
+      setShowModal(false);
+      setNewReport({ case_id: '', title: '', summary: '' });
+      fetchReports();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to create report. Check console for details.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusClass = (status) => {
     if(status === 'Approved') return 'badge-green';
@@ -47,10 +80,97 @@ const Reports = () => {
           <h1 className="page-title">Forensic &amp; Audit Reports</h1>
           <p className="page-subtitle">Official court-admissible reports, custody verification summaries, and case findings</p>
         </div>
-        <button className="btn btn-primary">
-          <Plus size={18} /> Generate New Report
-        </button>
+        {['ADMIN', 'FORENSIC_OFFICER'].includes(user?.role) && (
+          <button className="btn btn-primary" onClick={() => { setError(''); setShowModal(true); }}>
+            <Plus size={18} /> Generate New Report
+          </button>
+        )}
       </div>
+
+      {/* Create Report Modal */}
+      {showModal && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+          <div className="modal-dialog">
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Generate Forensic Report</h2>
+                <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>Document official examination findings and case evidence</p>
+              </div>
+              <button 
+                onClick={() => setShowModal(false)} 
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '6px', color: '#64748b' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              {error && <div className="error-msg">{error}</div>}
+              
+              <form onSubmit={handleCreateReport}>
+                <div className="input-group">
+                  <label>Associated Case <span className="required">*</span></label>
+                  <select 
+                    required 
+                    className="form-control" 
+                    value={newReport.case_id} 
+                    onChange={e => setNewReport({...newReport, case_id: e.target.value})}
+                  >
+                    <option value="">Select an associated investigation case...</option>
+                    {cases.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.case_number} - {c.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="input-group">
+                  <label>Report Title <span className="required">*</span></label>
+                  <input 
+                    required 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="e.g. Digital Audio Forensic Verification & Analysis"
+                    value={newReport.title} 
+                    onChange={e => setNewReport({...newReport, title: e.target.value})} 
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label>Executive Summary / Initial Findings</label>
+                  <textarea 
+                    rows={4}
+                    className="form-control" 
+                    placeholder="Enter preliminary forensic findings or evidence summaries..."
+                    value={newReport.summary} 
+                    onChange={e => setNewReport({...newReport, summary: e.target.value})} 
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-outline" 
+                    style={{ flex: 1 }} 
+                    onClick={() => setShowModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    style={{ flex: 1.5 }}
+                    disabled={loading}
+                  >
+                    {loading ? 'Submitting...' : 'Generate Report'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="filter-bar">
         <div className="filter-input-group">

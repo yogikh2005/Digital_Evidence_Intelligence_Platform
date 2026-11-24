@@ -3,15 +3,24 @@ from django.conf import settings
 from investigations.models import InvestigationCase
 
 class InvestigationReport(models.Model):
+    class Type(models.TextChoices):
+        FORENSIC = "FORENSIC", "Forensic"
+        INCIDENT = "INCIDENT", "Incident"
+        FINAL = "FINAL", "Final"
+        OTHER = "OTHER", "Other"
+
     class Status(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
         UNDER_REVIEW = "UNDER_REVIEW", "Under Review"
         APPROVED = "APPROVED", "Approved"
         REJECTED = "REJECTED", "Rejected"
+
     case = models.ForeignKey(InvestigationCase, on_delete=models.PROTECT, related_name="reports")
     title = models.CharField(max_length=255)
+    report_type = models.CharField(max_length=50, choices=Type.choices, default=Type.FORENSIC)
     summary = models.TextField(blank=True)
     findings = models.JSONField(default=dict, blank=True)
+    recommendations = models.TextField(blank=True, default="")
     generated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="reports_created")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     supervisor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="reports_decided", null=True, blank=True)

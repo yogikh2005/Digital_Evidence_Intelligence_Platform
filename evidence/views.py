@@ -28,6 +28,25 @@ from evidence.audio_services import (
     analyze_audio_transcript,
 )
 
+class EvidenceDetailView(generics.RetrieveAPIView):
+    """GET /api/evidence/<pk>/ — return a single evidence record."""
+    serializer_class = EvidenceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        u = self.request.user
+        q = Evidence.objects.select_related("case")
+        if u.role in [User.Role.ADMIN, User.Role.EVIDENCE_OFFICER]:
+            return q
+        if u.role == User.Role.INVESTIGATING_OFFICER:
+            return q.filter(case__investigating_officer=u)
+        if u.role == User.Role.FORENSIC_OFFICER:
+            return q.filter(case__forensic_officer=u)
+        if u.role == User.Role.SUPERVISOR:
+            return q.filter(case__supervisor=u)
+        return q.none()
+
+
 class EvidenceListCreateView(generics.ListCreateAPIView):
     serializer_class = EvidenceSerializer
     permission_classes = [IsAuthenticated]
@@ -43,7 +62,7 @@ class EvidenceListCreateView(generics.ListCreateAPIView):
     @transaction.atomic
     def perform_create(self, serializer):
         u = self.request.user
-        if u.role not in [User.Role.ADMIN, User.Role.EVIDENCE_OFFICER, User.Role.INVESTIGATING_OFFICER]: raise PermissionDenied("Only Admin, Evidence, or Investigating Officers can upload evidence.")
+        if u.role not in [User.Role.ADMIN, User.Role.EVIDENCE_OFFICER]: raise PermissionDenied("Only Admin or Evidence Officers can upload evidence.")
         f = self.request.FILES.get("file")
         if not f: raise ValidationError({"file": "Upload a file using multipart form data."})
         validate_file(f)
@@ -59,6 +78,65 @@ class EvidenceListCreateView(generics.ListCreateAPIView):
 )
         custody(obj, u, "UPLOADED", self.request, h)
         audit(u, "EVIDENCE_UPLOADED", {"evidence_id": obj.id, "case_id": obj.case_id, "sha256": h}, self.request)
+
+        # Automatic Audio Agent Trigger
+        if obj.evidence_type == Evidence.Type.AUDIO:
+            obj.status = Evidence.Status.PROCESSING
+            obj.save(update_fields=["status"])
+            import threading
+            threading.Thread(
+                target=self.run_background_audio_agent,
+                args=(obj.id, u.id),
+                daemon=True,
+            ).start()
+
+    @staticmethod
+    def run_background_audio_agent(evidence_id, user_id):
+        from django.db import connection
+        connection.close()
+        try:
+            from evidence.models import Evidence, AudioAnalysisResult
+            from accounts.models import User
+            from custody.services import custody
+            from audit.services import audit
+
+            evidence = Evidence.objects.select_related("case").filter(id=evidence_id).first()
+            user = User.objects.filter(id=user_id).first()
+            if not evidence or not evidence.file:
+                return
+
+            calculated_hash = calculate_file_sha256(evidence.file.path)
+            if calculated_hash != evidence.sha256_hash:
+                logger.error("Audio evidence ID %s integrity mismatch in background agent.", evidence_id)
+                return
+
+            transcription = transcribe_audio(evidence.file.path)
+            analysis = analyze_audio_transcript(transcription["full_text"], evidence.id)
+
+            result, created = AudioAnalysisResult.objects.update_or_create(
+                evidence=evidence,
+                defaults={
+                    "transcription": transcription,
+                    "analysis": analysis,
+                    "processed_hash": calculated_hash,
+                },
+            )
+
+            evidence.status = Evidence.Status.ANALYZED
+            evidence.save(update_fields=["status"])
+
+            custody(evidence, user, "AUDIO_AUTO_ANALYZED", None, calculated_hash)
+            audit(user, "AUDIO_AUTO_ANALYSIS_COMPLETED", {"evidence_id": evidence.id, "result_id": result.id})
+            logger.info("Automatic audio agent completed for evidence ID %s", evidence_id)
+        except Exception:
+            logger.exception("Automatic audio agent failed for evidence ID %s", evidence_id)
+            try:
+                from evidence.models import Evidence
+                Evidence.objects.filter(id=evidence_id).update(status=Evidence.Status.UPLOADED)
+            except Exception:
+                pass
+        finally:
+            connection.close()
 
 class EvidenceRequestListCreateView(generics.ListCreateAPIView):
     serializer_class = EvidenceRequestSerializer
@@ -272,15 +350,11 @@ class AudioTranscriptionView(AudioEvidenceAccessMixin, APIView):
         try:
             transcription = transcribe_audio(obj.file.path)
         except Exception:
-            logger.exception(
-
-            "Audio analysis failed for evidence ID %s",
-            obj.id,
-    )
-        return Response(
-        {"detail": "Audio analysis failed. Check server logs."},
-        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    )
+            logger.exception("Audio transcription failed for evidence ID %s", obj.id)
+            return Response(
+                {"detail": "Audio transcription failed. Check server logs."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         audit(
             request.user,

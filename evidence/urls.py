@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     EvidenceListCreateView,
+    EvidenceDetailView,
     EvidenceRequestListCreateView,
     EvidenceRequestActionView,
     EvidenceReviewView,
@@ -12,6 +13,7 @@ from .views import (
 
 urlpatterns = [
     path("", EvidenceListCreateView.as_view()),
+    path("<int:pk>/", EvidenceDetailView.as_view()),
     path("requests/", EvidenceRequestListCreateView.as_view()),
     path("requests/<int:pk>/action/", EvidenceRequestActionView.as_view()),
     path("<int:pk>/review/", EvidenceReviewView.as_view()),
